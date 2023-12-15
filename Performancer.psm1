@@ -67,7 +67,7 @@ param (
     if ($max_length -lt 110) {
         throw 'Please make sure your console window is at least 110 characters wide'
     }
-    for ($i = 0; $i -lt 7; $i++) {
+    for ($i = 0; $i -lt 8; $i++) {
         Write-Host (" " * ($max_length - 1))
     }
     
@@ -171,6 +171,14 @@ param (
             if ([System.Console]::ReadKey($true).Key -eq 'q') {
                 break
             }
+            if ([System.Console]::ReadKey($true).Key -eq 'c') {
+                [System.Console]::SetCursorPosition(0, $max_height - 8)
+                for ($i = 0; $i -lt 7; $i++) {
+                    Write-Host (" " * ($max_length - 1))
+                }
+                [System.Console]::SetCursorPosition(0, $max_height - 8)
+            }
         }
+        
     }
 }
