@@ -1,4 +1,4 @@
-# Performancer
+# Forever Performance Monitor
 
 This PowerShell script displays performance metrics such as CPU usage, memory usage, disk read and write rates, and network received and sent rates.
 
