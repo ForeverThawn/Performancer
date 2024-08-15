@@ -28,6 +28,7 @@ A -Force option is reserved for future use.
 * The script requires PowerShell version 5.0 or above.
 * The script may not display all performance metrics on all systems.
 * The script may not display the correct format for the date and time depending on the user's language and region settings. ( Although the script will always display the date and time in the format `MMM. dd, yyyy   HH:mm:ss` )
+* Edit the config file `csv_path.cfg` to modify the path to save instant output.
 
 ## Contributing
 

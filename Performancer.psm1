@@ -164,6 +164,8 @@ param (
 
 }
 
+$Script:csv_save_file = Get-Location
+
 Function Show-Performance {
 param (
     [switch]$Force
@@ -208,7 +210,10 @@ param (
     $disk_write_sum = 0
     $network_received_sum = 0
     $network_sent_sum = 0
-    
+
+    Get-PerformancerConfig
+    Write-ToCsvHead
+
     while ($true) {
         #_alloc_space_Get-Performance
         $max_height = [System.Console]::get_WindowHeight()
@@ -246,14 +251,15 @@ param (
         $memory_commited = $counterValues[7]
         $memory_commit_limit = $counterValues[8]
 
-    
-        Write-Host "Forever Performance Monitor 3                                                                        " -ForegroundColor Yellow
+        $record_time = '{0,4:n0}:' -f (Convert-Timestamp -timestamp $timestamp -Days)
+        $record_time += '{0,3:n0}:' -f (Convert-Timestamp -timestamp $timestamp -Hours)
+        $record_time += '{0,3:n0}:' -f (Convert-Timestamp -timestamp $timestamp -Minutes)
+        $record_time += '{0,3:n0}' -f (Convert-Timestamp -timestamp $timestamp -Seconds)
+
+        Write-Host "Forever Performance Monitor 4                                                                        " -ForegroundColor Yellow
         Write-Host $currentTime -ForegroundColor Green -NoNewline
         Write-Host "                " -NoNewline
-        Write-Host ('{0,4:n0}:' -f (Convert-Timestamp -timestamp $timestamp -Days)) -ForegroundColor DarkCyan -NoNewline
-        Write-Host ('{0,3:n0}:' -f (Convert-Timestamp -timestamp $timestamp -Hours)) -ForegroundColor DarkCyan -NoNewline
-        Write-Host ('{0,3:n0}:' -f (Convert-Timestamp -timestamp $timestamp -Minutes)) -ForegroundColor DarkCyan -NoNewline
-        Write-Host ('{0,3:n0}' -f (Convert-Timestamp -timestamp $timestamp -Seconds)) -ForegroundColor DarkCyan -NoNewline
+        Write-Host $record_time -ForegroundColor DarkCyan -NoNewline
         Write-Host ('                                                ')
         
 
@@ -272,14 +278,22 @@ param (
         Write-Host (' ')
         # Write-Host ('                                                                  ')
     
+
+        $memory_used_formatted = Format-BytesToString($memory_used)
+        $memory_total_formatted = Format-BytesToString($memory_total)
+
         Write-Host "Physical Memory  : " -ForegroundColor DarkYellow -NoNewline
         # Write-Host ('{0,15:n3}  % ' -f $memory_usage_percentage) -NoNewline
         Format-PercentageColor -Percentage $memory_usage_percentage -NoNewline
         Write-Host '  ' -NoNewline
         Write-Host ('{0,21:n} B ' -f $memory_used) -ForegroundColor DarkGray -NoNewline
-        Write-Host (Format-BytesToString($memory_used)) -NoNewline
+        Write-Host ($memory_used_formatted) -NoNewline
         Write-Host '/' -ForegroundColor DarkGray -NoNewline
-        Write-Host (Format-BytesToString($memory_total))
+        Write-Host ($memory_total_formatted)
+
+
+        $memory_commited_formatted = Format-BytesToString($($memory_commited))
+        $memory_commit_limit_formatted = Format-BytesToString($($memory_commit_limit))
 
         Write-Host "Total    Commited: " -ForegroundColor DarkYellow -NoNewline
         # Write-Host ('{0,15:n3}  % ' -f $memory_committed_percentage) -NoNewline
@@ -287,25 +301,31 @@ param (
         # Write-Host (Format-BytesToString($($process_working_set))) -NoNewline
         Write-Host '  ' -NoNewline
         Write-Host ('{0,21:n} B ' -f $memory_commited) -ForegroundColor DarkGray -NoNewline
-        Write-Host (Format-BytesToString($($memory_commited))) -NoNewline
+        Write-Host ($memory_commited_formatted) -NoNewline
         Write-Host '/' -ForegroundColor DarkGray -NoNewline
         # Write-Host ('{0,21:n} B ' -f $memory_commit_limit) -ForegroundColor DarkGray
-        Write-Host (Format-BytesToString($($memory_commit_limit))) 
+        Write-Host ($memory_commit_limit_formatted) 
+
 
         $disk_read_sum += $($disk_read)
-    
+        $disk_read_formatted = Format-BytesToString($($disk_read))
+        $disk_read_sum_formatted = Format-BytesToString($disk_read_sum)
+
         Write-Host "Disk     Read    : " -ForegroundColor DarkYellow -NoNewline
-        Write-Host (Format-BytesToString($($disk_read))) -NoNewline
+        Write-Host ($disk_read_formatted) -NoNewline
         Write-Host ('{0,21:n}  B ' -f $($disk_read)) -ForegroundColor DarkGray -NoNewline
-        Write-Host (Format-BytesToString($disk_read_sum)) -ForegroundColor DarkCyan -NoNewline
+        Write-Host ($disk_read_sum_formatted) -ForegroundColor DarkCyan -NoNewline
         Write-Host 'Total                ' -ForegroundColor DarkCyan
         
+
         $disk_write_sum += $($disk_write)
-        
+        $disk_write_formatted = Format-BytesToString($($disk_write))
+        $disk_write_sum_formatted = Format-BytesToString($disk_write_sum)
+
         Write-Host "Disk     Write   : " -ForegroundColor DarkYellow -NoNewline
-        Write-Host (Format-BytesToString($($disk_write))) -NoNewline
+        Write-Host ($disk_write_formatted) -NoNewline
         Write-Host ('{0,21:n}  B ' -f $($disk_write)) -ForegroundColor DarkGray -NoNewline
-        Write-Host (Format-BytesToString($disk_write_sum)) -ForegroundColor DarkCyan -NoNewline
+        Write-Host ($disk_write_sum_formatted) -ForegroundColor DarkCyan -NoNewline
         Write-Host 'Total                ' -ForegroundColor DarkCyan
     
         # 统计每个网卡的 自己加 （总长度 - 其他计数器） / 2
@@ -326,17 +346,22 @@ param (
         }
         $network_sent_value = $sum
         $network_sent_sum += $network_sent_value
+
+        $network_received_value_formatted = Format-BytesToString($network_received_value)
+        $network_received_sum_formatted = Format-BytesToString($network_received_sum)
+        $network_sent_value_formatted = Format-BytesToString($network_sent_value)
+        $network_sent_sum_formatted = Format-BytesToString($network_sent_sum)
         
         Write-Host "Network  Received: " -ForegroundColor DarkYellow -NoNewline
-        Write-Host (Format-BytesToString($network_received_value)) -NoNewline
+        Write-Host ($network_received_value_formatted) -NoNewline
         Write-Host ('{0,21:n}  B ' -f $network_received_value) -ForegroundColor DarkGray -NoNewline
-        Write-Host (Format-BytesToString($network_received_sum)) -ForegroundColor DarkCyan -NoNewline
+        Write-Host ($network_received_sum_formatted) -ForegroundColor DarkCyan -NoNewline
         Write-Host 'Total                ' -ForegroundColor DarkCyan
     
         Write-Host "Network  Sent    : " -ForegroundColor DarkYellow -NoNewline
-        Write-Host (Format-BytesToString($network_sent_value)) -NoNewline
+        Write-Host ($network_sent_value_formatted) -NoNewline
         Write-Host ('{0,21:n}  B ' -f $network_sent_value) -ForegroundColor DarkGray -NoNewline
-        Write-Host (Format-BytesToString($network_sent_sum)) -ForegroundColor DarkCyan -NoNewline
+        Write-Host ($network_sent_sum_formatted) -ForegroundColor DarkCyan -NoNewline
         Write-Host 'Total                ' -ForegroundColor DarkCyan
 
 
@@ -360,10 +385,62 @@ param (
             Write-Host '                          ' -NoNewline
         }
 
-        Write-Host (Format-BytesToString($hyperV_memory_usage)) -NoNewline
+        $hyperV_memory_usage_formatted = Format-BytesToString($hyperV_memory_usage)
+        $hyperV_memory_total_formatted = Format-BytesToString($hyperV_memory_total)
+
+        Write-Host ($hyperV_memory_usage_formatted) -NoNewline
         Write-Host '/' -ForegroundColor DarkGray -NoNewline
-        Write-Host (Format-BytesToString($hyperV_memory_total))
+        Write-Host ($hyperV_memory_total_formatted)
         
+        <# param($current_time,
+    $record_time,
+    $cpu_usage,
+    $cpu_user_usage,
+    $cpu_privileged_usage,
+    $cpu_dpc_usage,
+    $memory_usage_percentage, 
+    $memory_used,
+    $memory_total,
+    $memory_committed_percentage,
+    $memory_commited,
+    $memory_commit_limit,
+    $disk_read,
+    $disk_write,
+    $network_received_value,
+    $network_sent_value,
+    $disk_read_sum,
+    $disk_write_sum,
+    $network_received_sum,
+    $network_sent_sum,
+    $hyperV_memory_usage,
+    $hyperV_memory_avail,
+    $hyperV_memory_total
+) #>
+        Write-ToCsv($currentTime,
+            $record_time,
+            $cpu_usage,
+            $cpu_user_usage,
+            $cpu_privileged_usage,
+            $cpu_dpc_usage,
+            $memory_usage_percentage, 
+            $memory_used_formatted,
+            $memory_total_formatted,
+            $memory_committed_percentage,
+            $memory_commited_formatted,
+            $memory_commit_limit_formatted,
+            $disk_read_formatted,
+            $disk_write_formatted,
+            $network_received_value_formatted,
+            $network_sent_value_formatted,
+            $disk_read_sum_formatted,
+            $disk_write_sum_formatted,
+            $network_received_sum_formatted,
+            $network_sent_sum_formatted,
+            $hyperV_memory_usage_percentage,
+            $hyperV_memory_usage_formatted,
+            $hyperV_memory_total_formatted
+        )
+
         $timestamp += 1
         
         if ([System.Console]::KeyAvailable) {
@@ -380,4 +457,98 @@ param (
         }
         
     }
+}
+
+Function Get-PerformancerConfig {
+    $Script:csv_save_path = Get-Content $PSScriptRoot\csv_path.cfg | Resolve-Path
+}
+
+
+
+Function Write-ToCsvHead {
+    $write_tmp = "Forever Performance Monitor 4,Record Time,CPU Usage,CPU User,CPU Privileged,CPU Driver,Physical Memory Usage,Physical Memory,Max Memory Size,Committed Usage,Committed Size,Max Committed Size,Disk Read Rate,Disk Write Rate,Network Receiving Rate,Network Sending Rate,Total Disk Read,Total Disk Write,Total Network Received,Total Network Sent,Hyper-V Memory Usage,Hyper-V Memory Available,Hyper-V Memory Total,`n"
+    
+    $timestamp = Get-Date -Format 'yyyy-MM-dd_hh-mm-ss'
+    $Script:csv_save_file = "$Script:csv_save_path\performancer_$timestamp.csv"
+    Set-Content -Path $Script:csv_save_file -Value $write_tmp
+}
+
+Function Write-ToCsv {
+param(
+    $current_time,
+    $record_time,
+    $cpu_usage,
+    $cpu_user_usage,
+    $cpu_privileged_usage,
+    $cpu_dpc_usage,
+    $memory_usage_percentage, 
+    $memory_used,
+    $memory_total,
+    $memory_committed_percentage,
+    $memory_commited,
+    $memory_commit_limit,
+    $disk_read,
+    $disk_write,
+    $network_received_value,
+    $network_sent_value,
+    $disk_read_sum,
+    $disk_write_sum,
+    $network_received_sum,
+    $network_sent_sum,
+    $hyperV_memory_usage_percentage,
+    $hyperV_memory_usage,
+    $hyperV_memory_total
+)
+$write_tmp = @(
+    $current_time,
+    $record_time,
+    $cpu_usage,
+    $cpu_user_usage,
+    $cpu_privileged_usage,
+    $cpu_dpc_usage,
+    $memory_usage_percentage,
+    $memory_used,
+    $memory_total,
+    $memory_committed_percentage,
+    $memory_commited,
+    $memory_commit_limit,
+    $disk_read,
+    $disk_write,
+    $network_received_value,
+    $network_sent_value,
+    $disk_read_sum,
+    $disk_write_sum,
+    $network_received_sum,
+    $network_sent_sum,
+    $hyperV_memory_usage_percentage,
+    $hyperV_memory_usage,
+    $hyperV_memory_total
+) | Join-String -Separator '","'
+
+    # $write_tmp = "$current_time,"
+    # $write_tmp += "$record_time,"
+    # $write_tmp += "$cpu_usage,"
+    # $write_tmp += "$cpu_user_usage,"
+    # $write_tmp += "$cpu_privileged_usage,"
+    # $write_tmp += "$cpu_dpc_usage,"
+    # $write_tmp += "$memory_usage_percentage,"
+    # $write_tmp += "$memory_used,"
+    # $write_tmp += "$memory_total,"
+    # $write_tmp += "$memory_committed_percentage,"
+    # $write_tmp += "$memory_commited,"
+    # $write_tmp += "$memory_commit_limit,"
+    # $write_tmp += "$disk_read,"
+    # $write_tmp += "$disk_write,"
+    # $write_tmp += "$network_received_value,"
+    # $write_tmp += "$network_sent_value,"
+    # $write_tmp += "$disk_read_sum,"
+    # $write_tmp += "$disk_write_sum,"
+    # $write_tmp += "$network_received_sum,"
+    # $write_tmp += "$network_sent_sum,"
+    # $write_tmp += "$hyperV_memory_usage,"
+    # $write_tmp += "$hyperV_memory_avail,"
+    # $write_tmp += "$hyperV_memory_total,"
+    # $write_tmp += "`n"
+    try { Add-Content -Path $Script:csv_save_file -Value "`"$write_tmp`"" -Force }
+    catch { Continue }
 }
