@@ -1,5 +1,8 @@
 # Forever Performance Monitor
 
+### Go check new version of forever-perfmon rewrite with Rust
+[Forever PerfMon](https://github.com/ForeverThawn/forever-perfmon)
+
 This PowerShell script displays performance metrics such as CPU usage, memory usage, disk read and write rates, and network received and sent rates.
 
 (Just a tiny script, I will update irregularly)
